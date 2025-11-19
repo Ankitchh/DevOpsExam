@@ -18,7 +18,7 @@ RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 3001
+EXPOSE 5000
 
 VOLUME [ "/app/config", "/app/data", "/app/logs" ]
 

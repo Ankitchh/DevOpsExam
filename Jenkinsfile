@@ -3,8 +3,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'docker_hub'     // Jenkins credential ID
-        DOCKER_IMAGE = "ankitchh/exam"  // Change this
+        DOCKERHUB_CREDENTIALS = 'docker_id'    
+        DOCKER_IMAGE = "ankitchh/exam"  
     }
 
     stages {

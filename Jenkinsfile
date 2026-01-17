@@ -1,56 +1,73 @@
-
 pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'docker_id'    
-        DOCKER_IMAGE = "ankitchh/exam"  
+        IMAGE_NAME = "ankitchhetri/myapp"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+        K8S_NAMESPACE = "default"
+        APP_NAME = "myapp"
     }
 
     stages {
-        stage('Checkout Code') {
+
+        stage('Clone Code') {
             steps {
-                echo "Pulling code from Git repository..."
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/Ankitchh/DevOpsExam.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    echo "Building Docker image..."
-                    sh "docker build -t ${DOCKER_IMAGE}:latest ."
-                }
+                sh """
+                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                """
             }
         }
 
-        stage('Login to Docker Hub') {
-            steps {
-                script {
-                    echo "Logging into Docker Hub..."
-                    withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                        sh "echo $PASS | docker login -u $USER --password-stdin"
-                    }
-                }
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                script {
-                    echo "Pushing image to Docker Hub..."
-                    sh "docker push ${DOCKER_IMAGE}:latest"
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Pipeline completed successfully!"
-        }
-        failure {
-            echo "Pipeline failed."
+      stage('Push Image to Registry') {
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-creds',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS'
+        )]) {
+            sh """
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push ${IMAGE_NAME}:${IMAGE_TAG}
+            """
         }
     }
 }
+
+
+        stage('Deploy to GREEN Environment') {
+            steps {
+                sh """
+                kubectl apply -f /home/ubuntu/kind_cluster/k8s/green-deployment.yml
+                kubectl set image deployment/${APP_NAME}-green \
+                  ${APP_NAME}=${IMAGE_NAME}:${IMAGE_TAG} \
+                  -n ${K8S_NAMESPACE}
+                """
+            }
+        }
+
+        stage('Manual Approval') {
+            steps {
+                input message: 'Approve switching production traffic to GREEN?',
+                      ok: 'Approve'
+            }
+        }
+
+        stage('Switch Traffic to GREEN') {
+            steps {
+                sh """
+                kubectl patch service ${APP_NAME}-service \
+                -n ${K8S_NAMESPACE} \
+                -p '{"spec":{"selector":{"app":"${APP_NAME}","env":"green"}}}'
+                """
+            }
+        }
+    }
+}
+

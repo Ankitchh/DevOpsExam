@@ -44,7 +44,7 @@ pipeline {
         stage('Deploy to GREEN Environment') {
             steps {
                 sh """
-                kubectl apply -f /home/ubuntu/kind_cluster/k8s/green-deployment.yml
+                kubectl apply -f kind_cluster/k8s/green-deployment.yaml
                 kubectl set image deployment/${APP_NAME}-green \
                   ${APP_NAME}=${IMAGE_NAME}:${IMAGE_TAG} \
                   -n ${K8S_NAMESPACE}

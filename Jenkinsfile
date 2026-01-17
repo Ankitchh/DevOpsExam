@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "ankitchhetri/myapp"
+        IMAGE_NAME = "ankitchhetri/myapp:latest"
         IMAGE_TAG  = "${BUILD_NUMBER}"
         K8S_NAMESPACE = "default"
         APP_NAME = "myapp"
